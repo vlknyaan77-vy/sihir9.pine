@@ -10,7 +10,7 @@ string GRP_TAB  = "📊 Tablo Ayarları / Table Settings"
 
 // --- GİRDİLER / INPUTS ---
 lb_mode        = input.string("Manuel", "Tarama Modu / Lookback Mode", options=["Manuel", "Otomatik (Hassasiyet)", "Global (Maksimum)", "Manuel (Ofset)"], group=GRP_AUTO)
-lb_sens        = input.int(1, "Otomatik Hassasiyet / Auto Sensitivity", minval=1, maxval=20, group=GRP_AUTO, tooltip="Otomatik modda ne kadar geriye bakılacağını ayarlar.")
+lb_sens        = input.int(1, "Otomatik Hassasiyet / Auto Sensitivity", minval=1, maxval=9, group=GRP_AUTO, tooltip="Otomatik modda ne kadar geriye bakılacağını ayarlar.")
 auto_lookback  = input.int(81, "Manuel Tarama Mesafesi / Manual Lookback", minval=10, maxval=1990, group=GRP_AUTO)
 auto_threshold = input.float(0.1, "Sabitleme Eşiği / Settle Threshold (x sz)", group=GRP_AUTO, tooltip="Fiyat filtreden bu kadar uzaklaşırsa çapa güncellenir.")
 auto_prox_threshold = input.float(0.5, "Yaklaşma Eşiği / Proximity Threshold (%)", group=GRP_AUTO, tooltip="Fiyat filtreye bu kadar yaklaşırsa çapa güncellenir.")
