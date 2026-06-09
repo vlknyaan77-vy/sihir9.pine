@@ -44,6 +44,7 @@ float atr_per = math.min(1990.0, auto_atr ? atr_per_auto : nz(str.tonumber(atr_o
 
 show_peak      = input.bool(true, "Tepe Filtresini Göster / Show Peak Filter", group=GRP_VIS)
 show_valley    = input.bool(true, "Dip Filtresini Göster / Show Valley Filter", group=GRP_VIS)
+use_ha         = input.bool(false, "Heikin Ashi Hesaplaması Kullan / Use Heikin Ashi Calculation", group=GRP_VIS)
 show_clusters  = input.bool(true, "Ek Katmanları Göster / Show Extra Layers", group=GRP_VIS)
 peak_color     = input.color(color.red, "Tepe Rengi / Peak Color", group=GRP_VIS)
 valley_color   = input.color(color.green, "Dip Rengi / Valley Color", group=GRP_VIS)
@@ -107,14 +108,24 @@ method upd_filt(FiltState s, float h, float l, float r, float init_val, bool res
     s.rfilt
 
 // --- HESAPLAMA AKIŞI / CALCULATION FLOW ---
-float tr = ta.tr(true)
+// Heikin Ashi Calculation
+var float haOpen = na
+haClose = (open + high + low + close) / 4
+haOpen := na(haOpen[1]) ? (open + close) / 2 : (haOpen[1] + haClose[1]) / 2
+haHigh = math.max(high, math.max(haOpen, haClose))
+haLow  = math.min(low,  math.min(haOpen, haClose))
+
+eff_h  = use_ha ? haHigh : high
+eff_l  = use_ha ? haLow  : low
+eff_c  = use_ha ? haClose : close
+float tr = use_ha ? math.max(haHigh - haLow, math.max(math.abs(haHigh - haClose[1]), math.abs(haLow - haClose[1]))) : ta.tr(true)
 
 int lb_input_val = lb_mode == "Global (Maksimum)" ? 1990 : lb_mode == "Otomatik (Hassasiyet)" ? lb_sens * 144 : auto_lookback
 
 // Calculation of is_in_range without last_bar_index dependency
 // Using timenow to estimate the current bar position relative to history
 bool is_in_range = (lb_mode == "Global (Maksimum)") or 
-                  (lb_mode == "Manuel (Ofset)") or
+                  (lb_mode == "Manuel (Tarih Seçimi)") or
                   (timenow - time < (lb_input_val + 500) * timeframe.in_seconds() * 1000)
 
 float rng_per   = atr_per
@@ -125,6 +136,9 @@ max_bars_back(high, 2000)
 max_bars_back(low, 2000)
 max_bars_back(close, 2000)
 max_bars_back(time, 2000)
+max_bars_back(eff_h, 2000)
+max_bars_back(eff_l, 2000)
+max_bars_back(eff_c, 2000)
 
 // 2. Manual Gamma Selections
 float p_gamma_val_manual = p_gamma_drawer_sel == "Çekmece 1" ? p_gamma_opt : p_gamma_drawer_sel == "Çekmece 2" ? p_gamma_opt_2 : p_gamma_drawer_sel == "Çekmece 3" ? p_gamma_opt_3 : p_gamma_drawer_sel == "Çekmece 4" ? p_gamma_opt_4 : p_gamma_drawer_sel == "Çekmece 5" ? p_gamma_opt_5 : p_gamma_opt_6
@@ -138,8 +152,8 @@ int eff_lb = math.min(math.max(1, lb_input), bar_index + 1)
 f_dyn_hb(src, len) => ta.highestbars(src, math.min(len, bar_index + 1))
 f_dyn_lb(src, len) => ta.lowestbars(src, math.min(len, bar_index + 1))
 
-hb_4990 = f_dyn_hb(high, 1990), lb_4990 = f_dyn_lb(low, 1990)
-hb_auto = f_dyn_hb(high, lb_input), lb_auto = f_dyn_lb(low, lb_input)
+hb_4990 = f_dyn_hb(eff_h, 1990), lb_4990 = f_dyn_lb(eff_l, 1990)
+hb_auto = f_dyn_hb(eff_h, lb_input), lb_auto = f_dyn_lb(eff_l, lb_input)
 
 // Local extremes
 int hb_raw = lb_mode == "Global (Maksimum)" ? hb_4990 : hb_auto
@@ -194,8 +208,8 @@ f_get_settled_idx(bool is_peak, int lb_mode_idx, int lb_val, float prev_f, float
 
 int lb_mode_idx = lb_mode == "Global (Maksimum)" ? 0 : 1
 if is_in_range
-    settled_p_idx := lb_mode == "Manuel (Tarih Seçimi)" ? na : f_get_settled_idx(true, lb_mode_idx, lb_input, last_f_p, cur_p_sz, settled_p_idx, high, low, close, hb_4990, lb_4990, hb_auto, lb_auto)
-    settled_v_idx := lb_mode == "Manuel (Tarih Seçimi)" ? na : f_get_settled_idx(false, lb_mode_idx, lb_input, last_f_v, cur_v_sz, settled_v_idx, high, low, close, hb_4990, lb_4990, hb_auto, lb_auto)
+    settled_p_idx := lb_mode == "Manuel (Tarih Seçimi)" ? na : f_get_settled_idx(true, lb_mode_idx, lb_input, last_f_p, cur_p_sz, settled_p_idx, eff_h, eff_l, eff_c, hb_4990, lb_4990, hb_auto, lb_auto)
+    settled_v_idx := lb_mode == "Manuel (Tarih Seçimi)" ? na : f_get_settled_idx(false, lb_mode_idx, lb_input, last_f_v, cur_v_sz, settled_v_idx, eff_h, eff_l, eff_c, hb_4990, lb_4990, hb_auto, lb_auto)
 
 if lb_mode == "Manuel (Tarih Seçimi)"
     settled_p_idx := ta.valuewhen(time <= p_time, bar_index, 0)
@@ -207,14 +221,14 @@ var FiltState fs_v = FiltState.new()
 
 is_p_anc = (bar_index == settled_p_idx) or (ta.change(settled_p_idx) != 0)
 is_v_anc = (bar_index == settled_v_idx) or (ta.change(settled_v_idx) != 0)
-float init_p_val = high[math.max(0, bar_index - nz(settled_p_idx, bar_index))]
-float init_v_val = low[math.max(0, bar_index - nz(settled_v_idx, bar_index))]
+float init_p_val = eff_h[math.max(0, bar_index - nz(settled_p_idx, bar_index))]
+float init_v_val = eff_l[math.max(0, bar_index - nz(settled_v_idx, bar_index))]
 
-is_new_hi = high == ta.highest(high, eff_lb)
-is_new_lo = low  == ta.lowest(low, eff_lb)
+is_new_hi = eff_h == ta.highest(eff_h, eff_lb)
+is_new_lo = eff_l == ta.lowest(eff_l, eff_lb)
 
-last_f_p := fs_p.upd_filt(high, low, cur_p_sz, init_p_val, is_p_anc)
-last_f_v := fs_v.upd_filt(high, low, cur_v_sz, init_v_val, is_v_anc)
+last_f_p := fs_p.upd_filt(eff_h, eff_l, cur_p_sz, init_p_val, is_p_anc)
+last_f_v := fs_v.upd_filt(eff_h, eff_l, cur_v_sz, init_v_val, is_v_anc)
 
 // Visualization
 var polyline[] p_pl = array.new<polyline>(0)
@@ -270,10 +284,10 @@ if barstate.islast
             chart.point[] pts = array.new<chart.point>(0)
             float cf = na, float pf = na
             int s_idx = math.max(bar_index - 1990, p_idx_u)
-            float st = high[bar_index-s_idx]
+            float st = eff_h[bar_index-s_idx]
             for j = s_idx to bar_index
                 off = bar_index - j
-                cf := f_r.upd_filt(high[off], low[off], cur_sz_unit[off] * g, st, j == s_idx)
+                cf := f_r.upd_filt(eff_h[off], eff_l[off], cur_sz_unit[off] * g, st, j == s_idx)
                 if not na(pf) and math.abs(pf - cf) > (syminfo.mintick / 10)
                     array.push(pts, chart.point.from_index(j, pf))
                 array.push(pts, chart.point.from_index(j, cf))
@@ -292,10 +306,10 @@ if barstate.islast
             chart.point[] pts = array.new<chart.point>(0)
             float cf = na, float pf = na
             int s_idx = math.max(bar_index - 1990, v_idx_u)
-            float st = low[bar_index-s_idx]
+            float st = eff_l[bar_index-s_idx]
             for j = s_idx to bar_index
                 off = bar_index - j
-                cf := f_r.upd_filt(high[off], low[off], cur_sz_unit[off] * g, st, j == s_idx)
+                cf := f_r.upd_filt(eff_h[off], eff_l[off], cur_sz_unit[off] * g, st, j == s_idx)
                 if not na(pf) and math.abs(pf - cf) > (syminfo.mintick / 10)
                     array.push(pts, chart.point.from_index(j, pf))
                 array.push(pts, chart.point.from_index(j, cf))
@@ -339,26 +353,26 @@ if barstate.islast
     if not na(p_idx_label)
         int h_off = math.max(0, math.min(1999, bar_index - p_idx_label))
         if na(lp)
-            lp := label.new(p_idx_label, high[h_off], "⚓ Tepe", color=peak_color, textcolor=color.white, style=label.style_label_down)
+            lp := label.new(p_idx_label, eff_h[h_off], "⚓ Tepe", color=peak_color, textcolor=color.white, style=label.style_label_down)
             if lb_mode == "Manuel (Tarih Seçimi)"
-                llin_p := line.new(p_idx_label, low[h_off], p_idx_label, high[h_off], extend=extend.both, color=color.new(peak_color, 50), style=line.style_dashed)
+                llin_p := line.new(p_idx_label, eff_l[h_off], p_idx_label, eff_h[h_off], extend=extend.both, color=color.new(peak_color, 50), style=line.style_dashed)
         else
-            label.set_xy(lp, p_idx_label, high[h_off])
+            label.set_xy(lp, p_idx_label, eff_h[h_off])
             if not na(llin_p)
-                line.set_xy1(llin_p, p_idx_label, low[h_off])
-                line.set_xy2(llin_p, p_idx_label, high[h_off])
+                line.set_xy1(llin_p, p_idx_label, eff_l[h_off])
+                line.set_xy2(llin_p, p_idx_label, eff_h[h_off])
 
     if not na(v_idx_label)
         int v_off = math.max(0, math.min(1999, bar_index - v_idx_label))
         if na(lv)
-            lv := label.new(v_idx_label, low[v_off], "⚓ Dip", color=valley_color, textcolor=color.white, style=label.style_label_up)
+            lv := label.new(v_idx_label, eff_l[v_off], "⚓ Dip", color=valley_color, textcolor=color.white, style=label.style_label_up)
             if lb_mode == "Manuel (Tarih Seçimi)"
-                llin_v := line.new(v_idx_label, low[v_off], v_idx_label, high[v_off], extend=extend.both, color=color.new(valley_color, 50), style=line.style_dashed)
+                llin_v := line.new(v_idx_label, eff_l[v_off], v_idx_label, eff_h[v_off], extend=extend.both, color=color.new(valley_color, 50), style=line.style_dashed)
         else
-            label.set_xy(lv, v_idx_label, low[v_off])
+            label.set_xy(lv, v_idx_label, eff_l[v_off])
             if not na(llin_v)
-                line.set_xy1(llin_v, v_idx_label, low[v_off])
-                line.set_xy2(llin_v, v_idx_label, high[v_off])
+                line.set_xy1(llin_v, v_idx_label, eff_l[v_off])
+                line.set_xy2(llin_v, v_idx_label, eff_h[v_off])
 
 
 alertcondition(settled_p_idx != settled_p_idx[1], "Yeni Tepe", "Otomatik çapa yeni bir tepe noktasına sabitlendi!")
