@@ -122,6 +122,11 @@ eff_l  = use_ha ? haLow  : low
 eff_c  = use_ha ? haClose : close
 float tr = use_ha ? math.max(haHigh - haLow, math.max(math.abs(haHigh - haClose[1]), math.abs(haLow - haClose[1]))) : ta.tr(true)
 
+// Optimization Motor Series
+f_get_sz(m) => f_kama_atr(tr, math.min(1990.0, (timeframe.in_seconds() / 60.0) * m))
+sz_0 = f_get_sz(0.00369), sz_1 = f_get_sz(0.0369), sz_2 = f_get_sz(0.369)
+sz_3 = f_get_sz(3.69),    sz_4 = f_get_sz(36.9),   sz_5 = f_get_sz(369), sz_6 = f_get_sz(3693)
+
 int lb_input_val = lb_mode == "Global (Maksimum)" ? 1990 : lb_mode == "Otomatik (Hassasiyet)" ? lb_sens * 144 : auto_lookback
 
 // Calculation of is_in_range without last_bar_index dependency
@@ -141,6 +146,8 @@ max_bars_back(time, 2000)
 max_bars_back(eff_h, 2000)
 max_bars_back(eff_l, 2000)
 max_bars_back(eff_c, 2000)
+max_bars_back(sz_0, 2000), max_bars_back(sz_1, 2000), max_bars_back(sz_2, 2000)
+max_bars_back(sz_3, 2000), max_bars_back(sz_4, 2000), max_bars_back(sz_5, 2000), max_bars_back(sz_6, 2000)
 
 // 2. Manual Gamma Selections
 float p_gamma_val_manual = p_gamma_drawer_sel == "Çekmece 1" ? p_gamma_opt : p_gamma_drawer_sel == "Çekmece 2" ? p_gamma_opt_2 : p_gamma_drawer_sel == "Çekmece 3" ? p_gamma_opt_3 : p_gamma_drawer_sel == "Çekmece 4" ? p_gamma_opt_4 : p_gamma_drawer_sel == "Çekmece 5" ? p_gamma_opt_5 : p_gamma_opt_6
@@ -154,12 +161,12 @@ int eff_lb = math.min(math.max(1, lb_input), bar_index + 1)
 f_dyn_hb(src, len) => ta.highestbars(src, math.min(len, bar_index + 1))
 f_dyn_lb(src, len) => ta.lowestbars(src, math.min(len, bar_index + 1))
 
-hb_4990 = f_dyn_hb(eff_h, 1990), lb_4990 = f_dyn_lb(eff_l, 1990)
+hb_max  = f_dyn_hb(eff_h, 1990), lb_max  = f_dyn_lb(eff_l, 1990)
 hb_auto = f_dyn_hb(eff_h, lb_input), lb_auto = f_dyn_lb(eff_l, lb_input)
 
 // Local extremes
-int hb_raw = lb_mode == "Global (Maksimum)" ? hb_4990 : hb_auto
-int lb_raw = lb_mode == "Global (Maksimum)" ? lb_4990 : lb_auto
+int hb_raw = lb_mode == "Global (Maksimum)" ? hb_max : hb_auto
+int lb_raw = lb_mode == "Global (Maksimum)" ? lb_max : lb_auto
 
 // Persistent Cluster Gammas
 var float p_g_main = na
@@ -168,6 +175,8 @@ var float[] p_g_nexts = array.new_float(0)
 var float v_g_main = na
 var float[] v_g_prevs = array.new_float(0)
 var float[] v_g_nexts = array.new_float(0)
+var float best_p_mult = na
+var float best_v_mult = na
 
 if barstate.islast
     // 4.2. Determine Main Gammas
@@ -175,12 +184,72 @@ if barstate.islast
     v_g_main := v_gamma_val_manual
 
     p_g_prevs := array.new_float(0)
-    p_step = p_gamma_drawer_sel == "Çekmece 1" ? 1.125 : p_gamma_drawer_sel == "Çekmece 2" ? 2.25 : p_gamma_drawer_sel == "Çekmece 3" ? 4.5 : p_gamma_drawer_sel == "Çekmece 4" ? 9.0 : p_gamma_drawer_sel == "Çekmece 5" ? 0.81 : 1.125
+    p_step = p_gamma_drawer_sel == "Çekmece 1" ? 1.125 : p_gamma_drawer_sel == "Çekmece 2" ? 2.25 : p_gamma_drawer_sel == "Çekmece 3" ? 4.5 : p_gamma_drawer_sel == "Çekmece 4" ? 9.0 : p_gamma_drawer_sel == "Çekmece 5" ? 0.81 : p_gamma_drawer_sel == "Çekmece 6" ? 1.125 : 1.125
     p_g_nexts := f_fill_cluster(p_g_main, p_step)
     
     v_g_prevs := array.new_float(0)
-    v_step = v_gamma_drawer_sel == "Çekmece 1" ? 1.125 : v_gamma_drawer_sel == "Çekmece 2" ? 2.25 : v_gamma_drawer_sel == "Çekmece 3" ? 4.5 : v_gamma_drawer_sel == "Çekmece 4" ? 9.0 : v_gamma_drawer_sel == "Çekmece 5" ? 0.81 : 1.125
+    v_step = v_gamma_drawer_sel == "Çekmece 1" ? 1.125 : v_gamma_drawer_sel == "Çekmece 2" ? 2.25 : v_gamma_drawer_sel == "Çekmece 3" ? 4.5 : v_gamma_drawer_sel == "Çekmece 4" ? 9.0 : v_gamma_drawer_sel == "Çekmece 5" ? 0.81 : v_gamma_drawer_sel == "Çekmece 6" ? 1.125 : 1.125
     v_g_nexts := f_fill_cluster(v_g_main, v_step)
+
+    // Optimization Motor Logic
+    multipliers = array.from(0.00369, 0.0369, 0.369, 3.69, 36.9, 369, 3693)
+
+    if not na(settled_p_idx) or not na(settled_v_idx)
+        float min_p_signals = 1e10
+        float min_v_signals = 1e10
+
+        for m_idx = 0 to array.size(multipliers) - 1
+            float m = array.get(multipliers, m_idx)
+
+            // Peak Optimization
+            if not na(settled_p_idx)
+                int s_p = math.max(bar_index - 1990, settled_p_idx)
+                float st_p = eff_h[bar_index - s_p]
+                float cur_f = st_p
+                int p_signals = 0
+                bool is_above = eff_c[bar_index - s_p] > cur_f
+
+                for j = s_p + 1 to bar_index
+                    off = bar_index - j
+                    float r = (m_idx == 0 ? sz_0[off] : m_idx == 1 ? sz_1[off] : m_idx == 2 ? sz_2[off] : m_idx == 3 ? sz_3[off] : m_idx == 4 ? sz_4[off] : m_idx == 5 ? sz_5[off] : sz_6[off]) * p_gamma_val_manual
+                    if eff_h[off] - r > cur_f
+                        cur_f := eff_h[off] - r
+                    if eff_l[off] + r < cur_f
+                        cur_f := eff_l[off] + r
+
+                    bool now_above = eff_c[off] > cur_f
+                    if now_above != is_above
+                        p_signals += 1
+                        is_above := now_above
+
+                if p_signals < min_p_signals
+                    min_p_signals := float(p_signals)
+                    best_p_mult := m
+
+            // Valley Optimization
+            if not na(settled_v_idx)
+                int s_v = math.max(bar_index - 1990, settled_v_idx)
+                float st_v = eff_l[bar_index - s_v]
+                float cur_f = st_v
+                int v_signals = 0
+                bool is_above = eff_c[bar_index - s_v] > cur_f
+
+                for j = s_v + 1 to bar_index
+                    off = bar_index - j
+                    float r = (m_idx == 0 ? sz_0[off] : m_idx == 1 ? sz_1[off] : m_idx == 2 ? sz_2[off] : m_idx == 3 ? sz_3[off] : m_idx == 4 ? sz_4[off] : m_idx == 5 ? sz_5[off] : sz_6[off]) * v_gamma_val_manual
+                    if eff_h[off] - r > cur_f
+                        cur_f := eff_h[off] - r
+                    if eff_l[off] + r < cur_f
+                        cur_f := eff_l[off] + r
+
+                    bool now_above = eff_c[off] > cur_f
+                    if now_above != is_above
+                        v_signals += 1
+                        is_above := now_above
+
+                if v_signals < min_v_signals
+                    min_v_signals := float(v_signals)
+                    best_v_mult := m
 
 // 5. Final Effective Gammas & Sizes
 float p_gamma_val = p_gamma_val_manual
@@ -194,8 +263,8 @@ var int settled_v_idx = na
 var float last_f_p = na
 var float last_f_v = na
 
-f_get_settled_idx(bool is_peak, int lb_mode_idx, int lb_val, float prev_f, float sz_val, int prev_settled, float h_src, float l_src, float c_src, int hb_49, int lb_49, int hb_a, int lb_a) =>
-    int off = lb_mode_idx == 0 ? (is_peak ? hb_49 : lb_49) : (is_peak ? hb_a : lb_a)
+f_get_settled_idx(bool is_peak, int lb_mode_idx, int lb_val, float prev_f, float sz_val, int prev_settled, float h_src, float l_src, float c_src, int hb_m, int lb_m, int hb_a, int lb_a) =>
+    int off = lb_mode_idx == 0 ? (is_peak ? hb_m : lb_m) : (is_peak ? hb_a : lb_a)
     int raw_ext_idx = bar_index + off
     int res_idx = prev_settled
     if na(prev_settled) or (bar_index - prev_settled > lb_val)
@@ -210,8 +279,8 @@ f_get_settled_idx(bool is_peak, int lb_mode_idx, int lb_val, float prev_f, float
 
 int lb_mode_idx = lb_mode == "Global (Maksimum)" ? 0 : 1
 if is_in_range
-    settled_p_idx := lb_mode == "Manuel (Tarih Seçimi)" ? na : f_get_settled_idx(true, lb_mode_idx, lb_input, last_f_p, cur_p_sz, settled_p_idx, eff_h, eff_l, eff_c, hb_4990, lb_4990, hb_auto, lb_auto)
-    settled_v_idx := lb_mode == "Manuel (Tarih Seçimi)" ? na : f_get_settled_idx(false, lb_mode_idx, lb_input, last_f_v, cur_v_sz, settled_v_idx, eff_h, eff_l, eff_c, hb_4990, lb_4990, hb_auto, lb_auto)
+    settled_p_idx := lb_mode == "Manuel (Tarih Seçimi)" ? na : f_get_settled_idx(true, lb_mode_idx, lb_input, last_f_p, cur_p_sz, settled_p_idx, eff_h, eff_l, eff_c, hb_max, lb_max, hb_auto, lb_auto)
+    settled_v_idx := lb_mode == "Manuel (Tarih Seçimi)" ? na : f_get_settled_idx(false, lb_mode_idx, lb_input, last_f_v, cur_v_sz, settled_v_idx, eff_h, eff_l, eff_c, hb_max, lb_max, hb_auto, lb_auto)
 
 if lb_mode == "Manuel (Tarih Seçimi)"
     settled_p_idx := ta.valuewhen(time <= p_time, bar_index, 0)
@@ -238,10 +307,10 @@ peak_sell = ta.crossunder(eff_c, last_f_p)
 valley_buy = ta.crossover(eff_c, last_f_v)
 valley_sell = ta.crossunder(eff_c, last_f_v)
 
-plotshape(show_p_signals and peak_buy and bar_index >= settled_p_idx, "Tepe Al", shape.triangleup, location.belowbar, color.green, size=size.small, text="AL", textcolor=color.green)
-plotshape(show_p_signals and peak_sell and bar_index >= settled_p_idx, "Tepe Sat", shape.triangledown, location.abovebar, color.red, size=size.small, text="SAT", textcolor=color.red)
-plotshape(show_v_signals and valley_buy and bar_index >= settled_v_idx, "Dip Al", shape.triangleup, location.belowbar, color.lime, size=size.small, text="AL", textcolor=color.lime)
-plotshape(show_v_signals and valley_sell and bar_index >= settled_v_idx, "Dip Sat", shape.triangledown, location.abovebar, color.maroon, size=size.small, text="SAT", textcolor=color.maroon)
+plotshape(show_p_signals and show_peak and peak_buy and bar_index >= settled_p_idx, "Tepe Al", shape.triangleup, location.belowbar, color.green, size=size.small, text="AL", textcolor=color.green)
+plotshape(show_p_signals and show_peak and peak_sell and bar_index >= settled_p_idx, "Tepe Sat", shape.triangledown, location.abovebar, color.red, size=size.small, text="SAT", textcolor=color.red)
+plotshape(show_v_signals and show_valley and valley_buy and bar_index >= settled_v_idx, "Dip Al", shape.triangleup, location.belowbar, color.lime, size=size.small, text="AL", textcolor=color.lime)
+plotshape(show_v_signals and show_valley and valley_sell and bar_index >= settled_v_idx, "Dip Sat", shape.triangledown, location.abovebar, color.maroon, size=size.small, text="SAT", textcolor=color.maroon)
 
 // Visualization
 var polyline[] p_pl = array.new<polyline>(0)
@@ -333,7 +402,7 @@ if barstate.islast
 // Table
 if show_table and barstate.islast
     pos = table_pos == "Top Right" ? position.top_right : table_pos == "Bottom Right" ? position.bottom_right : table_pos == "Top Left" ? position.top_left : table_pos == "Bottom Left" ? position.bottom_left : position.middle_right
-    var table info_tab = table.new(pos, 2, 6, border_width=1, border_color=color.gray, frame_width=1, frame_color=color.gray)
+    var table info_tab = table.new(pos, 2, 8, border_width=1, border_color=color.gray, frame_width=1, frame_color=color.gray)
     c_bg = color.new(color.gray, 80), c_txt = color.white
     table.cell(info_tab, 0, 0, "💎 Volcanic", bgcolor=color.new(color.black, 40), text_color=color.yellow)
     table.cell(info_tab, 1, 0, "", bgcolor=color.new(color.black, 40))
@@ -353,6 +422,12 @@ if show_table and barstate.islast
 
     table.cell(info_tab, 0, 5, "ATR Çarpanı", bgcolor=color.new(color.gray, 90), text_color=c_txt)
     table.cell(info_tab, 1, 5, str.tostring(atr_mult, "#.#####"), bgcolor=color.new(color.gray, 90), text_color=c_txt)
+
+    table.cell(info_tab, 0, 6, "En İyi Tepe Çarpanı", bgcolor=color.new(color.gray, 90), text_color=c_txt)
+    table.cell(info_tab, 1, 6, str.tostring(best_p_mult, "#.#####"), bgcolor=color.new(color.gray, 90), text_color=c_txt)
+
+    table.cell(info_tab, 0, 7, "En İyi Dip Çarpanı", bgcolor=color.new(color.gray, 90), text_color=c_txt)
+    table.cell(info_tab, 1, 7, str.tostring(best_v_mult, "#.#####"), bgcolor=color.new(color.gray, 90), text_color=c_txt)
 
 var label lp = na
 var label lv = na
