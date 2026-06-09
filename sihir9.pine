@@ -109,7 +109,7 @@ method upd_filt(FiltState s, float h, float l, float r, float init_val, bool res
 // --- HESAPLAMA AKIŞI / CALCULATION FLOW ---
 float tr = ta.tr(true)
 
-int lb_input_val = lb_mode == "Global (Maksimum)" ? 1990 : lb_mode == "Otomatik (Hassasiyet)" ? lb_sens * 81 : auto_lookback
+int lb_input_val = lb_mode == "Global (Maksimum)" ? 1990 : lb_mode == "Otomatik (Hassasiyet)" ? lb_sens * 144 : auto_lookback
 
 // Calculation of is_in_range without last_bar_index dependency
 // Using timenow to estimate the current bar position relative to history
