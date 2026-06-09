@@ -238,10 +238,10 @@ peak_sell = ta.crossunder(eff_c, last_f_p)
 valley_buy = ta.crossover(eff_c, last_f_v)
 valley_sell = ta.crossunder(eff_c, last_f_v)
 
-plotshape(show_p_signals and peak_buy, "Tepe Al", shape.triangleup, location.belowbar, color.green, size=size.small, text="AL", textcolor=color.green)
-plotshape(show_p_signals and peak_sell, "Tepe Sat", shape.triangledown, location.abovebar, color.red, size=size.small, text="SAT", textcolor=color.red)
-plotshape(show_v_signals and valley_buy, "Dip Al", shape.triangleup, location.belowbar, color.lime, size=size.small, text="AL", textcolor=color.lime)
-plotshape(show_v_signals and valley_sell, "Dip Sat", shape.triangledown, location.abovebar, color.maroon, size=size.small, text="SAT", textcolor=color.maroon)
+plotshape(show_p_signals and peak_buy and bar_index >= settled_p_idx, "Tepe Al", shape.triangleup, location.belowbar, color.green, size=size.small, text="AL", textcolor=color.green)
+plotshape(show_p_signals and peak_sell and bar_index >= settled_p_idx, "Tepe Sat", shape.triangledown, location.abovebar, color.red, size=size.small, text="SAT", textcolor=color.red)
+plotshape(show_v_signals and valley_buy and bar_index >= settled_v_idx, "Dip Al", shape.triangleup, location.belowbar, color.lime, size=size.small, text="AL", textcolor=color.lime)
+plotshape(show_v_signals and valley_sell and bar_index >= settled_v_idx, "Dip Sat", shape.triangledown, location.abovebar, color.maroon, size=size.small, text="SAT", textcolor=color.maroon)
 
 // Visualization
 var polyline[] p_pl = array.new<polyline>(0)
