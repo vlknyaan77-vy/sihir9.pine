@@ -1,5 +1,5 @@
 //@version=6
-indicator("Volcanic Auto Peaks & Valleys v6", overlay=true, max_bars_back=5000, max_lines_count=500, max_labels_count=500, max_polylines_count=100)
+indicator("Volcanic Auto Peaks & Valleys v6", overlay=true, max_bars_back=2000, max_lines_count=500, max_labels_count=500, max_polylines_count=100)
 
 // --- GRUPLAR / GROUPS ---
 string GRP_AUTO = "⚓ Otomatik Çapa Ayarları / Auto Anchor Settings"
@@ -11,11 +11,11 @@ string GRP_TAB  = "📊 Tablo Ayarları / Table Settings"
 // --- GİRDİLER / INPUTS ---
 lb_mode        = input.string("Manuel", "Tarama Modu / Lookback Mode", options=["Manuel", "Otomatik (Hassasiyet)", "Global (Maksimum)", "Manuel (Ofset)"], group=GRP_AUTO)
 lb_sens        = input.int(1, "Otomatik Hassasiyet / Auto Sensitivity", minval=1, maxval=20, group=GRP_AUTO, tooltip="Otomatik modda ne kadar geriye bakılacağını ayarlar.")
-auto_lookback  = input.int(81, "Manuel Tarama Mesafesi / Manual Lookback", minval=10, maxval=4990, group=GRP_AUTO)
+auto_lookback  = input.int(81, "Manuel Tarama Mesafesi / Manual Lookback", minval=10, maxval=1990, group=GRP_AUTO)
 auto_threshold = input.float(0.1, "Sabitleme Eşiği / Settle Threshold (x sz)", group=GRP_AUTO, tooltip="Fiyat filtreden bu kadar uzaklaşırsa çapa güncellenir.")
 auto_prox_threshold = input.float(0.5, "Yaklaşma Eşiği / Proximity Threshold (%)", group=GRP_AUTO, tooltip="Fiyat filtreye bu kadar yaklaşırsa çapa güncellenir.")
-p_anchor_off   = input.int(0, "Tepe Çapa Ofseti / Peak Anchor Offset", minval=0, maxval=4990, group=GRP_AUTO)
-v_anchor_off   = input.int(0, "Dip Çapa Ofseti / Valley Anchor Offset", minval=0, maxval=4990, group=GRP_AUTO)
+p_anchor_off   = input.int(0, "Tepe Çapa Ofseti / Peak Anchor Offset", minval=0, maxval=1990, group=GRP_AUTO)
+v_anchor_off   = input.int(0, "Dip Çapa Ofseti / Valley Anchor Offset", minval=0, maxval=1990, group=GRP_AUTO)
 
 // --- TEPE GİRDİLERİ (PEAK) ---
 p_gamma_drawer_sel = input.string("Çekmece 4", "Tepe Gamma Çekmece Seçimi", options=["Çekmece 1", "Çekmece 2", "Çekmece 3", "Çekmece 4", "Çekmece 5", "Çekmece 6"], group=GRP_FILT_P)
@@ -40,7 +40,7 @@ atr_mult       = input.float(3.69, "ATR Periyot Çarpanı / ATR Period Multiplie
 atr_opt        = input.string(defval="8.1", title="Manuel ATR Periyodu / Manual ATR Period", group=GRP_VIS, options=["0.09", "0.18", "0.225", "0.27", "0.36", "0.45", "0.54", "0.63", "0.72", "0.81", "0.9", "1.0", "1.125", "1.35", "1.8", "2.0", "2.25", "2.7", "3.15", "3.6", "4.05", "4.5", "4.95", "5.4", "5.85", "6.3", "6.75", "7.2", "7.65", "8.1"])
 
 float atr_per_auto = (timeframe.in_seconds() / 60.0) * atr_mult
-float atr_per = math.min(4990.0, auto_atr ? atr_per_auto : nz(str.tonumber(atr_opt), 8.1))
+float atr_per = math.min(1990.0, auto_atr ? atr_per_auto : nz(str.tonumber(atr_opt), 8.1))
 
 show_peak      = input.bool(true, "Tepe Filtresini Göster / Show Peak Filter", group=GRP_VIS)
 show_valley    = input.bool(true, "Dip Filtresini Göster / Show Valley Filter", group=GRP_VIS)
@@ -109,7 +109,7 @@ method upd_filt(FiltState s, float h, float l, float r, float init_val, bool res
 // --- HESAPLAMA AKIŞI / CALCULATION FLOW ---
 float tr = ta.tr(true)
 
-int lb_input_val = lb_mode == "Global (Maksimum)" ? 4990 : lb_mode == "Otomatik (Hassasiyet)" ? lb_sens * 81 : auto_lookback
+int lb_input_val = lb_mode == "Global (Maksimum)" ? 1990 : lb_mode == "Otomatik (Hassasiyet)" ? lb_sens * 81 : auto_lookback
 
 // Calculation of is_in_range without last_bar_index dependency
 // Using timenow to estimate the current bar position relative to history
@@ -120,11 +120,11 @@ bool is_in_range = (lb_mode == "Global (Maksimum)") or
 float rng_per   = atr_per
 float cur_sz_unit_raw = f_kama_atr(tr, nz(rng_per, 8.1))
 float cur_sz_unit = is_in_range ? cur_sz_unit_raw : 0.0
-max_bars_back(cur_sz_unit, 5000)
-max_bars_back(high, 5000)
-max_bars_back(low, 5000)
-max_bars_back(close, 5000)
-max_bars_back(time, 5000)
+max_bars_back(cur_sz_unit, 2000)
+max_bars_back(high, 2000)
+max_bars_back(low, 2000)
+max_bars_back(close, 2000)
+max_bars_back(time, 2000)
 
 // 2. Manual Gamma Selections
 float p_gamma_val_manual = p_gamma_drawer_sel == "Çekmece 1" ? p_gamma_opt : p_gamma_drawer_sel == "Çekmece 2" ? p_gamma_opt_2 : p_gamma_drawer_sel == "Çekmece 3" ? p_gamma_opt_3 : p_gamma_drawer_sel == "Çekmece 4" ? p_gamma_opt_4 : p_gamma_drawer_sel == "Çekmece 5" ? p_gamma_opt_5 : p_gamma_opt_6
@@ -138,7 +138,7 @@ int eff_lb = math.min(math.max(1, lb_input), bar_index + 1)
 f_dyn_hb(src, len) => ta.highestbars(src, math.min(len, bar_index + 1))
 f_dyn_lb(src, len) => ta.lowestbars(src, math.min(len, bar_index + 1))
 
-hb_4990 = f_dyn_hb(high, 4990), lb_4990 = f_dyn_lb(low, 4990)
+hb_4990 = f_dyn_hb(high, 1990), lb_4990 = f_dyn_lb(low, 1990)
 hb_auto = f_dyn_hb(high, lb_input), lb_auto = f_dyn_lb(low, lb_input)
 
 // Local extremes
@@ -269,7 +269,7 @@ if barstate.islast
             FiltState f_r = FiltState.new()
             chart.point[] pts = array.new<chart.point>(0)
             float cf = na, float pf = na
-            int s_idx = math.max(bar_index - 4990, p_idx_u)
+            int s_idx = math.max(bar_index - 1990, p_idx_u)
             float st = high[bar_index-s_idx]
             for j = s_idx to bar_index
                 off = bar_index - j
@@ -291,7 +291,7 @@ if barstate.islast
             FiltState f_r = FiltState.new()
             chart.point[] pts = array.new<chart.point>(0)
             float cf = na, float pf = na
-            int s_idx = math.max(bar_index - 4990, v_idx_u)
+            int s_idx = math.max(bar_index - 1990, v_idx_u)
             float st = low[bar_index-s_idx]
             for j = s_idx to bar_index
                 off = bar_index - j
@@ -337,7 +337,7 @@ if barstate.islast
     int v_idx_label = settled_v_idx
 
     if not na(p_idx_label)
-        int h_off = math.max(0, math.min(4999, bar_index - p_idx_label))
+        int h_off = math.max(0, math.min(1999, bar_index - p_idx_label))
         if na(lp)
             lp := label.new(p_idx_label, high[h_off], "⚓ Tepe", color=peak_color, textcolor=color.white, style=label.style_label_down)
             if lb_mode == "Manuel (Ofset)"
@@ -349,7 +349,7 @@ if barstate.islast
                 line.set_xy2(llin_p, p_idx_label, high[h_off])
 
     if not na(v_idx_label)
-        int v_off = math.max(0, math.min(4999, bar_index - v_idx_label))
+        int v_off = math.max(0, math.min(1999, bar_index - v_idx_label))
         if na(lv)
             lv := label.new(v_idx_label, low[v_off], "⚓ Dip", color=valley_color, textcolor=color.white, style=label.style_label_up)
             if lb_mode == "Manuel (Ofset)"
