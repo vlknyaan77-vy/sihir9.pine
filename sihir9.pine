@@ -36,7 +36,7 @@ v_gamma_opt_5    = input.float(0.81, "Dip Gamma (G5)", step=0.81, minval=0.1, ma
 v_gamma_opt_6    = input.float(1.44, "Dip Gamma (G6)", options=[0.315, 1.44, 2.565, 3.69, 4.815, 5.94, 7.065, 8.19, 9.315, 10.44, 36.9, 369, 3690], group=GRP_FILT_V)
 
 auto_atr       = input.bool(true, "Otomatik ATR Periyodu / Auto ATR Period", group=GRP_VIS)
-atr_mult       = input.float(8.1, "ATR Periyot Çarpanı / ATR Period Multiplier", step=0.1, group=GRP_VIS, tooltip="Otomatik modda zaman dilimi (dakika) bu sayı ile çarpılarak ATR periyodu bulunur.")
+atr_mult       = input.float(3.69, "ATR Periyot Çarpanı / ATR Period Multiplier", options=[0.00369, 0.0369, 0.369, 3.69, 36.9, 369], group=GRP_VIS, tooltip="Otomatik modda zaman dilimi (dakika) bu sayı ile çarpılarak ATR periyodu bulunur.")
 atr_opt        = input.string(defval="8.1", title="Manuel ATR Periyodu / Manual ATR Period", group=GRP_VIS, options=["0.09", "0.18", "0.225", "0.27", "0.36", "0.45", "0.54", "0.63", "0.72", "0.81", "0.9", "1.0", "1.125", "1.35", "1.8", "2.0", "2.25", "2.7", "3.15", "3.6", "4.05", "4.5", "4.95", "5.4", "5.85", "6.3", "6.75", "7.2", "7.65", "8.1"])
 
 float atr_per_auto = (timeframe.in_seconds() / 60.0) * atr_mult
