@@ -48,7 +48,8 @@ use_ha         = input.bool(false, "Heikin Ashi Hesaplaması Kullan / Use Heikin
 show_clusters  = input.bool(true, "Ek Katmanları Göster / Show Extra Layers", group=GRP_VIS)
 peak_color     = input.color(color.red, "Tepe Rengi / Peak Color", group=GRP_VIS)
 valley_color   = input.color(color.green, "Dip Rengi / Valley Color", group=GRP_VIS)
-show_signals   = input.bool(true, "Al/Sat Sinyallerini Göster / Show Buy/Sell Signals", group=GRP_VIS)
+show_p_signals = input.bool(true, "Tepe Al/Sat Sinyallerini Göster / Show Peak Buy/Sell Signals", group=GRP_VIS)
+show_v_signals = input.bool(true, "Dip Al/Sat Sinyallerini Göster / Show Valley Buy/Sell Signals", group=GRP_VIS)
 filt_width     = input.int(2, "Çizgi Kalınlığı / Line Width", minval=1, maxval=5, group=GRP_VIS)
 
 show_table     = input.bool(true, "Bilgi Tablosunu Göster / Show Info Table", group=GRP_TAB)
@@ -237,10 +238,10 @@ peak_sell = ta.crossunder(eff_c, last_f_p)
 valley_buy = ta.crossover(eff_c, last_f_v)
 valley_sell = ta.crossunder(eff_c, last_f_v)
 
-plotshape(show_signals and peak_buy, "Tepe Al", shape.triangleup, location.belowbar, color.green, size=size.small, text="AL", textcolor=color.green)
-plotshape(show_signals and peak_sell, "Tepe Sat", shape.triangledown, location.abovebar, color.red, size=size.small, text="SAT", textcolor=color.red)
-plotshape(show_signals and valley_buy, "Dip Al", shape.triangleup, location.belowbar, color.lime, size=size.small, text="AL", textcolor=color.lime)
-plotshape(show_signals and valley_sell, "Dip Sat", shape.triangledown, location.abovebar, color.maroon, size=size.small, text="SAT", textcolor=color.maroon)
+plotshape(show_p_signals and peak_buy, "Tepe Al", shape.triangleup, location.belowbar, color.green, size=size.small, text="AL", textcolor=color.green)
+plotshape(show_p_signals and peak_sell, "Tepe Sat", shape.triangledown, location.abovebar, color.red, size=size.small, text="SAT", textcolor=color.red)
+plotshape(show_v_signals and valley_buy, "Dip Al", shape.triangleup, location.belowbar, color.lime, size=size.small, text="AL", textcolor=color.lime)
+plotshape(show_v_signals and valley_sell, "Dip Sat", shape.triangledown, location.abovebar, color.maroon, size=size.small, text="SAT", textcolor=color.maroon)
 
 // Visualization
 var polyline[] p_pl = array.new<polyline>(0)
