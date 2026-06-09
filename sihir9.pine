@@ -9,13 +9,13 @@ string GRP_VIS  = "🎨 Görsel Ayarlar / Visual Settings"
 string GRP_TAB  = "📊 Tablo Ayarları / Table Settings"
 
 // --- GİRDİLER / INPUTS ---
-lb_mode        = input.string("Manuel", "Tarama Modu / Lookback Mode", options=["Manuel", "Otomatik (Hassasiyet)", "Global (Maksimum)", "Manuel (Ofset)"], group=GRP_AUTO)
+lb_mode        = input.string("Manuel", "Tarama Modu / Lookback Mode", options=["Manuel", "Otomatik (Hassasiyet)", "Global (Maksimum)", "Manuel (Tarih Seçimi)"], group=GRP_AUTO)
 lb_sens        = input.int(1, "Otomatik Hassasiyet / Auto Sensitivity", minval=1, maxval=9, group=GRP_AUTO, tooltip="Otomatik modda ne kadar geriye bakılacağını ayarlar.")
 auto_lookback  = input.int(81, "Manuel Tarama Mesafesi / Manual Lookback", minval=10, maxval=1990, group=GRP_AUTO)
 auto_threshold = input.float(0.1, "Sabitleme Eşiği / Settle Threshold (x sz)", group=GRP_AUTO, tooltip="Fiyat filtreden bu kadar uzaklaşırsa çapa güncellenir.")
 auto_prox_threshold = input.float(0.5, "Yaklaşma Eşiği / Proximity Threshold (%)", group=GRP_AUTO, tooltip="Fiyat filtreye bu kadar yaklaşırsa çapa güncellenir.")
-p_anchor_off   = input.int(0, "Tepe Çapa Ofseti / Peak Anchor Offset", minval=0, maxval=1990, group=GRP_AUTO)
-v_anchor_off   = input.int(0, "Dip Çapa Ofseti / Valley Anchor Offset", minval=0, maxval=1990, group=GRP_AUTO)
+p_time         = input.time(timestamp("2030-01-01"), "Tepe Çapa Zamanı / Peak Anchor Time", group=GRP_AUTO, confirm=true)
+v_time         = input.time(timestamp("2030-01-01"), "Dip Çapa Zamanı / Valley Anchor Time", group=GRP_AUTO, confirm=true)
 
 // --- TEPE GİRDİLERİ (PEAK) ---
 p_gamma_drawer_sel = input.string("Çekmece 4", "Tepe Gamma Çekmece Seçimi", options=["Çekmece 1", "Çekmece 2", "Çekmece 3", "Çekmece 4", "Çekmece 5", "Çekmece 6"], group=GRP_FILT_P)
@@ -194,12 +194,12 @@ f_get_settled_idx(bool is_peak, int lb_mode_idx, int lb_val, float prev_f, float
 
 int lb_mode_idx = lb_mode == "Global (Maksimum)" ? 0 : 1
 if is_in_range
-    settled_p_idx := lb_mode == "Manuel (Ofset)" ? na : f_get_settled_idx(true, lb_mode_idx, lb_input, last_f_p, cur_p_sz, settled_p_idx, high, low, close, hb_4990, lb_4990, hb_auto, lb_auto)
-    settled_v_idx := lb_mode == "Manuel (Ofset)" ? na : f_get_settled_idx(false, lb_mode_idx, lb_input, last_f_v, cur_v_sz, settled_v_idx, high, low, close, hb_4990, lb_4990, hb_auto, lb_auto)
+    settled_p_idx := lb_mode == "Manuel (Tarih Seçimi)" ? na : f_get_settled_idx(true, lb_mode_idx, lb_input, last_f_p, cur_p_sz, settled_p_idx, high, low, close, hb_4990, lb_4990, hb_auto, lb_auto)
+    settled_v_idx := lb_mode == "Manuel (Tarih Seçimi)" ? na : f_get_settled_idx(false, lb_mode_idx, lb_input, last_f_v, cur_v_sz, settled_v_idx, high, low, close, hb_4990, lb_4990, hb_auto, lb_auto)
 
-if lb_mode == "Manuel (Ofset)"
-    settled_p_idx := last_bar_index - p_anchor_off
-    settled_v_idx := last_bar_index - v_anchor_off
+if lb_mode == "Manuel (Tarih Seçimi)"
+    settled_p_idx := ta.valuewhen(time <= p_time, bar_index, 0)
+    settled_v_idx := ta.valuewhen(time <= v_time, bar_index, 0)
 
 // 7. Filter States
 var FiltState fs_p = FiltState.new()
@@ -340,7 +340,7 @@ if barstate.islast
         int h_off = math.max(0, math.min(1999, bar_index - p_idx_label))
         if na(lp)
             lp := label.new(p_idx_label, high[h_off], "⚓ Tepe", color=peak_color, textcolor=color.white, style=label.style_label_down)
-            if lb_mode == "Manuel (Ofset)"
+            if lb_mode == "Manuel (Tarih Seçimi)"
                 llin_p := line.new(p_idx_label, low[h_off], p_idx_label, high[h_off], extend=extend.both, color=color.new(peak_color, 50), style=line.style_dashed)
         else
             label.set_xy(lp, p_idx_label, high[h_off])
@@ -352,7 +352,7 @@ if barstate.islast
         int v_off = math.max(0, math.min(1999, bar_index - v_idx_label))
         if na(lv)
             lv := label.new(v_idx_label, low[v_off], "⚓ Dip", color=valley_color, textcolor=color.white, style=label.style_label_up)
-            if lb_mode == "Manuel (Ofset)"
+            if lb_mode == "Manuel (Tarih Seçimi)"
                 llin_v := line.new(v_idx_label, low[v_off], v_idx_label, high[v_off], extend=extend.both, color=color.new(valley_color, 50), style=line.style_dashed)
         else
             label.set_xy(lv, v_idx_label, low[v_off])
