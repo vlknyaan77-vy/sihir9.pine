@@ -55,7 +55,7 @@ table_pos      = input.string("Top Right", "Tablo Konumu / Table Position", opti
 // --- YARDIMCI FONKSİYONLAR / HELPERS ---
 f_fill_cluster(float main_val, float step) =>
     float[] res = array.new_float(0)
-    for k = 1 to 36
+    for k = 1 to 20
         val = main_val + (k * step)
         if val <= 81.0
             array.push(res, val)
