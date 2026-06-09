@@ -24,7 +24,7 @@ p_gamma_opt_2    = input.float(2.25, "Tepe Gamma (G2)", step=2.25, minval=0.1, m
 p_gamma_opt_3    = input.float(4.5, "Tepe Gamma (G3)", step=4.5, minval=0.1, maxval=81.0, group=GRP_FILT_P)
 p_gamma_opt_4    = input.float(9.0, "Tepe Gamma (G4)", step=9.0, minval=0.1, maxval=81.0, group=GRP_FILT_P)
 p_gamma_opt_5    = input.float(0.81, "Tepe Gamma (G5)", step=0.81, minval=0.1, maxval=81.0, group=GRP_FILT_P)
-p_gamma_opt_6    = input.float(1.44, "Tepe Gamma (G6)", options=[0.315, 1.44, 2.565, 3.69, 4.815, 5.94, 7.065, 8.19, 9.315, 10.44], group=GRP_FILT_P)
+p_gamma_opt_6    = input.float(1.44, "Tepe Gamma (G6)", options=[0.315, 1.44, 2.565, 3.69, 4.815, 5.94, 7.065, 8.19, 9.315, 10.44, 36.9, 369, 3690], group=GRP_FILT_P)
 
 // --- DİP GİRDİLERİ (VALLEY) ---
 v_gamma_drawer_sel = input.string("Çekmece 4", "Dip Gamma Çekmece Seçimi", options=["Çekmece 1", "Çekmece 2", "Çekmece 3", "Çekmece 4", "Çekmece 5", "Çekmece 6"], group=GRP_FILT_V)
@@ -33,7 +33,7 @@ v_gamma_opt_2    = input.float(2.25, "Dip Gamma (G2)", step=2.25, minval=0.1, ma
 v_gamma_opt_3    = input.float(4.5, "Dip Gamma (G3)", step=4.5, minval=0.1, maxval=81.0, group=GRP_FILT_V)
 v_gamma_opt_4    = input.float(9.0, "Dip Gamma (G4)", step=9.0, minval=0.1, maxval=81.0, group=GRP_FILT_V)
 v_gamma_opt_5    = input.float(0.81, "Dip Gamma (G5)", step=0.81, minval=0.1, maxval=81.0, group=GRP_FILT_V)
-v_gamma_opt_6    = input.float(1.44, "Dip Gamma (G6)", options=[0.315, 1.44, 2.565, 3.69, 4.815, 5.94, 7.065, 8.19, 9.315, 10.44], group=GRP_FILT_V)
+v_gamma_opt_6    = input.float(1.44, "Dip Gamma (G6)", options=[0.315, 1.44, 2.565, 3.69, 4.815, 5.94, 7.065, 8.19, 9.315, 10.44, 36.9, 369, 3690], group=GRP_FILT_V)
 
 auto_atr       = input.bool(true, "Otomatik ATR Periyodu / Auto ATR Period", group=GRP_VIS)
 atr_mult       = input.float(8.1, "ATR Periyot Çarpanı / ATR Period Multiplier", step=0.1, group=GRP_VIS, tooltip="Otomatik modda zaman dilimi (dakika) bu sayı ile çarpılarak ATR periyodu bulunur.")
